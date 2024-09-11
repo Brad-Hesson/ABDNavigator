@@ -9,14 +9,22 @@
         inherit system;
         config.allowUnfree = true;
       };
+      java = pkgs.jdk21.override { enableJavaFX = true; };
       settingsFile = pkgs.writeText "settings.json" (builtins.toJSON {
-        "java.jdt.ls.java.home" = "${pkgs.jdk}";
+        "java.jdt.ls.java.home" = "${java}";
+        "java.configuration.runtimes" = [
+          {
+            "path" = "${java}";
+            "name" = "nix-jdk";
+          }
+        ];
       });
     in
     {
       devShell = with pkgs; mkShell {
         packages = [
-          jdk8
+          pkgs.jdk21.override
+          { enableJavaFX = true; }
         ];
         buildInputs = [
         ];
