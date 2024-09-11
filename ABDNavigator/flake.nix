@@ -9,22 +9,22 @@
         inherit system;
         config.allowUnfree = true;
       };
-      java = pkgs.jdk21.override { enableJavaFX = true; };
+      java = pkgs.jdk.override { enableJavaFX = true; };
       settingsFile = pkgs.writeText "settings.json" (builtins.toJSON {
         "java.jdt.ls.java.home" = "${java}";
         "java.configuration.runtimes" = [
           {
-            "path" = "${java}";
-            "name" = "nix-jdk";
+            "path" = "${java}/lib/openjdk";
+            "name" = "JavaSE-21";
+            "default" = true;
           }
         ];
+        "java.configuration.detectJdksAtStart" = false;
       });
     in
     {
       devShell = with pkgs; mkShell {
         packages = [
-          pkgs.jdk21.override
-          { enableJavaFX = true; }
         ];
         buildInputs = [
         ];

@@ -9,14 +9,22 @@
         inherit system;
         config.allowUnfree = true;
       };
+      java = pkgs.jdk;
       settingsFile = pkgs.writeText "settings.json" (builtins.toJSON {
-        "java.jdt.ls.java.home" = "${pkgs.jdk}";
+        "java.jdt.ls.java.home" = "${java}";
+        "java.configuration.runtimes" = [
+          {
+            "path" = "${java}/lib/openjdk";
+            "name" = "JavaSE-21";
+            "default" = true;
+          }
+        ];
+        "java.configuration.detectJdksAtStart" = false;
       });
     in
     {
       devShell = with pkgs; mkShell {
         packages = [
-          jdk8
         ];
         buildInputs = [
         ];
