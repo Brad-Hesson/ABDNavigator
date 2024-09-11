@@ -25,6 +25,7 @@
     {
       devShell = with pkgs; mkShell {
         packages = [
+          java
         ];
         buildInputs = [
         ];
