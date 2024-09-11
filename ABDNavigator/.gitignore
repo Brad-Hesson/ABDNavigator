@@ -3,3 +3,5 @@
 /bin/
 /copiedData/
 /classes/
+/.direnv
+/.vscode
