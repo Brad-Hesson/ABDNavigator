@@ -16,8 +16,8 @@
     {
       devShell = with pkgs; mkShell {
         packages = [
+          jdk8
         ];
-        JRE_PATH = pkgs.jre8;
         buildInputs = [
         ];
         shellHook = ''
