@@ -1159,7 +1159,7 @@ public class SampleNavigator extends Application
 				S.setY( 1*scaleMultiplier );
 			}
 		}
-		else
+		else if (deltaY < 0)
 		{
 			if (!(keyDown == KeyCode.Y))
 			{
