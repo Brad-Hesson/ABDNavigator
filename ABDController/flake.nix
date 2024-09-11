@@ -9,14 +9,21 @@
         inherit system;
         config.allowUnfree = true;
       };
+      settings = {
+        "java.jdt.ls.java.home" = pkgs.jdk;
+      };
+      settingsFile = pkgs.writeText "settings.json" (builtins.toJSON settings);
     in
     {
       devShell = with pkgs; mkShell {
         packages = [
-          jdk
         ];
         buildInputs = [
         ];
+        shellHook = ''
+          mkdir .vscode
+          cp -f ${settingsFile} .vscode/settings.json
+        '';
       };
     }
   );
