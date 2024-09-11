@@ -9,15 +9,15 @@
         inherit system;
         config.allowUnfree = true;
       };
-      settings = {
-        "java.jdt.ls.java.home" = pkgs.jdk;
-      };
-      settingsFile = pkgs.writeText "settings.json" (builtins.toJSON settings);
+      settingsFile = pkgs.writeText "settings.json" (builtins.toJSON {
+        "java.jdt.ls.java.home" = "${pkgs.jdk}";
+      });
     in
     {
       devShell = with pkgs; mkShell {
         packages = [
         ];
+        JRE_PATH = pkgs.jre8;
         buildInputs = [
         ];
         shellHook = ''
