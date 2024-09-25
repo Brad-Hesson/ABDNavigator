@@ -148,9 +148,9 @@ public class ABDController
 		System.out.println("Starting Controller...");
 		//controller = new SCALAController();
 		if (testMode)
-			controller = new DummyController();
+			controller = new NanonisController();
 		else
-			controller = new MatrixController();
+			controller = new NanonisController();
 		
 		biasSignal = controller.getBiasSignal();
 		currentSignal = controller.getCurrentSignal();
