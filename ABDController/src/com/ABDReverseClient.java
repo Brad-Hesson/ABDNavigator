@@ -1,52 +1,49 @@
 package com;
 
-
 import java.io.*;
 import java.net.*;
 
+import controllers.nanonis.TypeWriter;
 
-public class ABDReverseClient
-{
-	public static int port = 6888;//was 6788
-	
-	public static DataOutputStream outStream;
-	public static BufferedReader serverReader;
-	
-	public static void initClient()
-	{
-		try
-		{
-			
-		}
-		catch (Exception ex)
-		{
+public class ABDReverseClient {
+	public static int port = 6888;// was 6788
+
+	public static TypeWriter out;
+
+	public static void initClient() {
+		try {
+
+		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
 	}
-	
-	public static String command(String out)
-	{
+
+	public static void drawLine(int idx, double[] data) {
 		if (!ABDServer.serverRunning)
-			return "";
-		
-		String line = null;
-		try
-		{
+			return;
+		try {
 			Socket clientSocket = new Socket("localhost", port);
-			outStream = new DataOutputStream(clientSocket.getOutputStream());
-			serverReader = new BufferedReader( new InputStreamReader(clientSocket.getInputStream()) );
-			
-			outStream.writeBytes(out + '\n');
-			line = serverReader.readLine();
-			
+			out = new TypeWriter(clientSocket.getOutputStream());
+			out.writeString("drawLine");
+			out.writeInt(idx);
+			out.writeArrayFloat64_1D(data);
 			clientSocket.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		catch (Exception ex)
-		{
-			ex.printStackTrace();
-			ABDServer.stopServer();
+	}
+
+	public static void lithoStep(int idx) {
+		if (!ABDServer.serverRunning)
+			return;
+		try {
+			Socket clientSocket = new Socket("localhost", port);
+			out = new TypeWriter(clientSocket.getOutputStream());
+			out.writeString("lithoStep");
+			out.writeInt(idx);
+			clientSocket.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		
-		return line;
 	}
 }

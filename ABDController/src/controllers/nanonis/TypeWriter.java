@@ -86,6 +86,13 @@ public class TypeWriter {
         }
     }
 
+    public void writeArrayFloat64_1D(double[] vals) throws IOException {
+        writeInt(vals.length);
+        for (double val : vals) {
+            writeFloat64(val);
+        }
+    }
+
     public void writeArrayString1D(String[] strings) throws IOException {
         int size = 0;
         for (String s : strings) {

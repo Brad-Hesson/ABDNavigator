@@ -3,9 +3,7 @@ package controllers.nanonis;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
 
 import controllers.nanonis.records.Direction;
@@ -776,98 +774,6 @@ public class NanonisClient {
             } catch (IOException e) {
                 tryReconnect();
             }
-        }
-    }
-
-    private void test() {
-
-        try {
-            float v = ZCtrlZPosGet();
-            System.out.println("ZCtrlZPosGet: " + v);
-
-            FolMeXYPosSet(12.34, 56.78, true);
-            System.out.println("FolMeXYPosSet: ");
-
-            double[] xy = FolMeXYPosGet(true);
-            System.out.println("FolMeXYPosGet: " + Arrays.toString(xy));
-
-            FolMeSpeedSet(12.34f, true);
-            System.out.println("FolMeSpeedSet: ");
-
-            SpeedSetting speed = FolMeSpeedGet();
-            System.out.println("FolMeSpeedGet: " + speed);
-
-            float[] xy2 = ScanXYPosGet(true);
-            System.out.println("ScanXYPosGet: " + Arrays.toString(xy2));
-
-            ScanData scan_data = ScanFrameDataGrab(0, true);
-            System.out.println("ScanFrameDataGrab: " + scan_data);
-
-            ZCtrlZPosSet(12.34f);
-            System.out.println("ZCtrlZPosSet: ");
-
-            BiasSet(12.34f);
-            System.out.println("BiasSet: ");
-
-            float voltage = BiasGet();
-            System.out.println("BiasGet: " + voltage);
-
-            ZCtrlSetpntSet(12.34f);
-            System.out.println("ZCtrlSetpntSet: ");
-
-            float setpoint = ZCtrlSetpntGet();
-            System.out.println("ZCtrlSetpntGet: " + setpoint);
-
-            float current = CurrentGet();
-            System.out.println("CurrentGet: " + current);
-
-            ZCtrlOnOffSet(true);
-            System.out.println("ZCtrlOnOffSet: ");
-
-            ScanFrame scanFrame = ScanFrameGet();
-            System.out.println("ScanFrameGet: " + scanFrame);
-
-            ScanFrameSet(0.1f, 0.2f, 1.1f, 1.2f, 3.14f);
-            System.out.println("ScanFrameSet: ");
-
-            ScanBuffer scanBuffer = ScanBufferGet();
-            System.out.println("ScanBufferGet: " + scanBuffer);
-
-            ScanBufferSet(new int[] { 1, 2, 3 }, 1, 2);
-            System.out.println("ScanBufferSet: ");
-
-            ScanAction(ScanAction.FREEZE, true);
-            System.out.println("ScanAction: ");
-
-            boolean running = ScanStatusGet();
-            System.out.println("ScanStatusGet: " + running);
-
-            ZCtrlWithdraw(true, -1);
-            System.out.println("ZCtrlWithdraw: ");
-
-            AutoApproachOpen();
-            System.out.println("AutoApproachOpen: ");
-
-            AutoApproachOnOffSet(true);
-            System.out.println("AutoApproachOnOffSet: ");
-
-            MotorFreqAmpSet(1.2f, 2.3f, 4);
-            System.out.println("MotorFreqAmpSet: ");
-
-            MotorStartMove(Direction.Y_POS, 5, 0, true);
-            System.out.println("MotorStartMove: ");
-
-            ScanPropsSet(false, false, false, "series", "comment", new String[] { "mod1", "mod2" });
-            System.out.println("ScanPropsSet: ");
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (NanonisException e) {
-            e.printStackTrace();
-        } catch (ResponseException e) {
-            e.printStackTrace();
-        } catch (UnsignedException e) {
-            e.printStackTrace();
         }
     }
 }

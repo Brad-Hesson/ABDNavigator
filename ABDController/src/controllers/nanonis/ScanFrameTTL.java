@@ -6,10 +6,8 @@ import controllers.nanonis.records.ScanFrame;
 
 public class ScanFrameTTL {
     private long ttlMillis = 1000;
-    private long writeDelayMillis = 100;
 
     private long lastLoad = 0;
-    private long lastModify = 0;
     public float centerXM;
     public float centerYM;
     public float widthM;
@@ -39,24 +37,5 @@ public class ScanFrameTTL {
 
     public void maybeStore() throws IOException, NanonisException, ResponseException {
         client.ScanFrameSet(centerXM, centerYM, widthM, heightM, angleDeg);
-        // boolean threadRunning = lastModify != 0;
-        // lastModify = System.currentTimeMillis();
-        // System.out.println("[TTL] updating value");
-        // if (!threadRunning) {
-        //     new Thread() {
-        //         public void run() {
-        //             while (System.currentTimeMillis() < lastModify + writeDelayMillis) {
-        //                 Thread.onSpinWait();
-        //             }
-        //             System.out.println("[TTL] Executing store");
-        //             lastModify = 0;
-        //             try {
-        //                 client.ScanFrameSet(centerXM, centerYM, widthM, heightM, angleDeg);
-        //             } catch (IOException | NanonisException | ResponseException e) {
-        //                 e.printStackTrace();
-        //             }
-        //         }
-        //     }.start();
-        // }
     }
 }

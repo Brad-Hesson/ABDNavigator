@@ -269,6 +269,7 @@ public class NanonisController implements ABDControllerInterface {
     }
 
     private boolean allowPreampRangeChange = false;
+
     @Override
     public void setAllowPreampRangeChange(boolean b) {
         allowPreampRangeChange = b;
@@ -460,12 +461,11 @@ public class NanonisController implements ABDControllerInterface {
                 try {
                     while (isScanning) {
                         ScanData scanData = client.ScanFrameDataGrab(14, true);
-                        int currentLine = computeNewestLine(scanData);
                         scanDirUp = scanData.scanDirUp();
-                        if (currentLine != lastLine && currentLine >= 0) {
-                            int rows = scanData.data().length;
-                            drawScanLine(rows - currentLine - 1, scanData.data()[currentLine]);
-                            lastLine = currentLine;
+                        int line = computeNewestLine(scanData);
+                        if (line != lastLine && line != -1) {
+                            drawNewLines(lastLine, line, scanData.data());
+                            lastLine = line;
                         }
                     }
                 } catch (IOException | NanonisException | ResponseException | UnsignedException e) {
@@ -473,6 +473,26 @@ public class NanonisController implements ABDControllerInterface {
                 }
             }
         }.start();
+    }
+
+    private void drawNewLines(int lastLine, int line, float[][] scanData) {
+        int dir;
+        if (lastLine == -1) {
+            dir = 1;
+            lastLine = line - 1;
+        } else {
+            dir = (line > lastLine) ? 1 : -1;
+        }
+        int cols = scanData[0].length;
+        int rows = scanData.length;
+        for (int i = lastLine; i != line; i += dir) {
+            int lineNum = i + dir;
+            double[] data = new double[cols];
+            for (int j = 0; j < cols; j++) {
+                data[j] = scanData[lineNum][j];
+            }
+            ABDReverseClient.drawLine(rows - lineNum - 1, data);
+        }
     }
 
     private int computeNewestLine(ScanData scanData) {
@@ -493,17 +513,6 @@ public class NanonisController implements ABDControllerInterface {
 
         }
         return -1;
-    }
-
-    private void drawScanLine(int idx, float[] data) {
-        StringBuilder s = new StringBuilder();
-
-        s.append(data[0]);
-        for (int i = 0; i < data.length; i++) {
-            s.append(",");
-            s.append(data[i]);
-        }
-        ABDReverseClient.command("L:" + idx + ":" + s.toString());
     }
 
     @Override

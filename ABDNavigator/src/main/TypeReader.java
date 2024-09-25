@@ -1,4 +1,4 @@
-package controllers.nanonis;
+package main;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -83,11 +83,11 @@ public class TypeReader {
         return vals;
     }
 
-    public float[] readArrayFloat32_1D() throws IOException {
+    public double[] readArrayFloat64_1D() throws IOException {
         int len = readInt();
-        float[] vals = new float[len];
+        double[] vals = new double[len];
         for (int i = 0; i < len; i++) {
-            vals[i] = readFloat32();
+            vals[i] = readFloat64();
         }
         return vals;
     }

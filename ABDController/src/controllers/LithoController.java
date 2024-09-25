@@ -601,8 +601,7 @@ public class LithoController implements DrawingComponent
 					idx ++;
 					double y1 = Double.parseDouble(steps[idx]);
 					idx ++;
-					
-					ABDReverseClient.command("lithoStep " + stepIdx);
+					ABDReverseClient.lithoStep(stepIdx);
 					
 					instance.performLithoSegment(in, x0, y0, x1, y1);
 					stepIdx ++;

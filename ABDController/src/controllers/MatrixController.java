@@ -646,15 +646,7 @@ public class MatrixController implements ABDControllerInterface
 		if (zScanLine.length == 0)
 			return;
 		
-		StringBuffer s = new StringBuffer();
-		s.append(zScanLine[0]);
-		
-		for (int i = 0; i < zScanLine.length; i ++)
-		{
-			s.append(",");
-			s.append(zScanLine[i]);
-		}
-		ABDReverseClient.command("L:" + scanLineIdx + ":" + s.toString());
+		ABDReverseClient.drawLine(scanLineIdx, zScanLine);
 	}
 	
 	synchronized public void withdraw()
