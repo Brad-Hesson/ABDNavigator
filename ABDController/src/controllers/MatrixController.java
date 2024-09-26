@@ -814,7 +814,7 @@ public class MatrixController implements ABDControllerInterface
 		
 	}
 	
-	synchronized public void vPulse()
+	synchronized public void vPulse(float voltage, float width)
 	{
 		System.out.println("pulsing V");
 		matrix.setStringProperty("STM_AtomManipulation::XYScanner.Execute_Port_Colour", -1, "VPulse");

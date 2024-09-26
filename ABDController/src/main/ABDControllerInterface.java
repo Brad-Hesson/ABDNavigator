@@ -79,7 +79,7 @@ public interface ABDControllerInterface
 	
 	//actions
 	public void zRamp();
-	public void vPulse();
+	public void vPulse(float voltage, float width);
 	
 	//specialized conditions
 	public void setLithoConditions(boolean b);

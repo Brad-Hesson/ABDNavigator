@@ -313,7 +313,7 @@ public class DummyController implements ABDControllerInterface
 		
 	}
 
-	public void vPulse()
+	public void vPulse(float voltage, float width)
 	{
 		// TODO Auto-generated method stub
 		

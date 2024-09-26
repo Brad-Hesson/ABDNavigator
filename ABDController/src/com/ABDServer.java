@@ -313,9 +313,13 @@ public class ABDServer
 		{
 			doZRamp();
 		}
-		else if (in.equals("vPulse"))
+		else if (in.startsWith("vPulse"))
 		{
-			doVPulse();
+			String s = getValueFrom(in);
+			String[] vs = s.split(",");
+			float voltage = Float.parseFloat(vs[0]);
+			float width = Float.parseFloat(vs[1]);
+			doVPulse(voltage, width);
 		}
 		else if (in.startsWith("lithoCurrent"))
 		{
@@ -564,7 +568,7 @@ public class ABDServer
 		}
 	}
 	
-	public static void doVPulse()
+	public static void doVPulse(float voltage, float width)
 	{
 		if (ABDController.controller.isScanning())
 			ABDController.controller.stopScan();
@@ -575,7 +579,7 @@ public class ABDServer
 			while (ABDController.controller.tipIsMoving()) {Thread.sleep(10);System.out.print(".");};
 			
 			
-			ABDController.controller.vPulse();
+			ABDController.controller.vPulse(voltage, width);
 		}
 		catch (Exception ex)
 		{

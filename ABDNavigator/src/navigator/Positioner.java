@@ -416,7 +416,7 @@ public class Positioner extends NavigationLayer
 					{
 						for (int i = 0; i < numPulses; i ++)
 						{
-							ABDClient.command("vPulse");
+							ABDClient.command("vPulse " + pulseVoltage + "," + pulseWidth);
 							Thread.sleep(500);
 						}
 					}
@@ -453,6 +453,8 @@ public class Positioner extends NavigationLayer
 	}
 	
 	int numPulses = 1;
+	float pulseVoltage = 5f;
+	float pulseWidth = 0.1f;
 	boolean scannerChild = false;
 	
 	public void postSetFromXML()
@@ -494,9 +496,15 @@ public class Positioner extends NavigationLayer
 		
 		if (scannerChild)
 		{
-			String s = xml.getAttribute("numPulses");
-			if (s.length() > 0)
-				numPulses = Integer.parseInt(s);
+			String s_pulses = xml.getAttribute("numPulses");
+			if (s_pulses.length() > 0)
+				numPulses = Integer.parseInt(s_pulses);
+			String s_voltage = xml.getAttribute("pulseVoltage");
+			if (s_voltage.length() > 0)
+				pulseVoltage = Float.parseFloat(s_voltage);
+			String s_width = xml.getAttribute("pulseWidth");
+			if (s_width.length() > 0)
+				pulseWidth = Float.parseFloat(s_width);
 			
 		}
 	}
@@ -508,6 +516,8 @@ public class Positioner extends NavigationLayer
 		if (scannerChild)
 		{
 			e.setAttribute("numPulses", Integer.toString(numPulses) );
+			e.setAttribute("pulseVoltage", Float.toString(pulseVoltage) );
+			e.setAttribute("pulseWidth", Float.toString(pulseWidth) );
 			
 		}
 		return e;
