@@ -2238,16 +2238,18 @@ public class SampleNavigator extends Application
 		FileChooser fc = new FileChooser();
     	fc.setTitle("Open Image File");
     	fc.setInitialDirectory( new File(openingDirectory) );
-    	ExtensionFilter filter0 = new ExtensionFilter("Matrix File", "*.*_mtrx");
-    	ExtensionFilter filter1 = new ExtensionFilter("SCALA File", "*.par");
+    	ExtensionFilter filterNanonis = new ExtensionFilter("Nanonis SXM File", "*.sxm");
+    	ExtensionFilter filterMatrix = new ExtensionFilter("Matrix File", "*.*_mtrx");
+    	ExtensionFilter filterScala = new ExtensionFilter("SCALA File", "*.par");
     	
-    	ExtensionFilter filter2 = new ExtensionFilter("Image File", "*.png", "*.jpg", "*.bmp", "*.gif", "*.tif");
-    	ExtensionFilter filter3 = new ExtensionFilter("GDS File", "*.gds", "*.GDS");
-    	fc.getExtensionFilters().add(filter0);
-    	fc.getExtensionFilters().add(filter1);
-    	fc.getExtensionFilters().add(filter2);
-    	fc.getExtensionFilters().add(filter3);
-    	fc.setSelectedExtensionFilter( filter0 );
+    	ExtensionFilter filterImage = new ExtensionFilter("Image File", "*.png", "*.jpg", "*.bmp", "*.gif", "*.tif");
+    	ExtensionFilter filterGDS = new ExtensionFilter("GDS File", "*.gds", "*.GDS");
+    	fc.getExtensionFilters().add(filterNanonis);
+    	fc.getExtensionFilters().add(filterMatrix);
+    	fc.getExtensionFilters().add(filterScala);
+    	fc.getExtensionFilters().add(filterImage);
+    	fc.getExtensionFilters().add(filterGDS);
+    	fc.setSelectedExtensionFilter( filterNanonis );
     	File openFile = fc.showOpenDialog(stage);
     	
     	if (openFile == null)
@@ -2282,7 +2284,7 @@ public class SampleNavigator extends Application
     			openFile = newFile;
     			
     			//if this is a matrix file, we should also copy over the appropriate parameter file
-    			if (fc.getSelectedExtensionFilter() == filter0)
+    			if (fc.getSelectedExtensionFilter() == filterMatrix)
     			{
     				System.out.println("finding param file for: " + prevFile );
     				StringBuffer paramFileS = MatrixSTMImageLayer.getParamFileFor( prevFile );
@@ -2333,7 +2335,7 @@ public class SampleNavigator extends Application
     		}
     	}
     	
-    	if (fc.getSelectedExtensionFilter() == filter3)
+    	if (fc.getSelectedExtensionFilter() == filterGDS)
     	{
     		//open gds file
     		URI f1 = new File(workingDirectory).toURI();
@@ -2361,7 +2363,7 @@ public class SampleNavigator extends Application
     		
     		l.finalSet();
     	}
-    	if (fc.getSelectedExtensionFilter() == filter2)
+    	if (fc.getSelectedExtensionFilter() == filterImage)
     	{
     		ImageLayer l = new ImageLayer();
     		
@@ -2385,7 +2387,7 @@ public class SampleNavigator extends Application
     		
     		selectedLayer.getChildren().add(l);
     	}
-    	if (fc.getSelectedExtensionFilter() == filter1)
+    	if (fc.getSelectedExtensionFilter() == filterScala)
     	{
     		OmicronSTMImageLayer l = new OmicronSTMImageLayer();
     		//String imgRelativeDirectory = new File(workingDirectory).toURI().relativize( openFile.toURI() ).getPath();
@@ -2402,9 +2404,88 @@ public class SampleNavigator extends Application
     		
     		selectedLayer.getChildren().add(l);
     	}
-    	if (fc.getSelectedExtensionFilter() == filter0)
+    	if (fc.getSelectedExtensionFilter() == filterMatrix)
     	{
     		MatrixSTMImageLayer l = new MatrixSTMImageLayer();
+    		
+    		//l.imgName = openFile.toURI().toString();
+    		URI f1 = new File(workingDirectory).toURI();
+    		URI f2 = openFile.toURI();
+    		
+    		l.imgName = new String("file:" + fullRelativize(f1,f2));
+    		
+    		
+    		l.init();
+    		
+    		if (l.paramsExtracted)
+    		{
+    			//if we were able to get info from the params file...
+    			l.scale.setX(l.scaleX0);
+    			l.scale.setY(l.scaleY0);
+    			l.rotation.setAngle(l.angle0);
+    		}
+    		
+    		Vector<NavigationLayer> navChildren = lParent.getLayerChildren();
+	    	if (navChildren.contains(scanner))
+	    	{
+	    		System.out.println("setting image data based on scanner");
+	    		Element xml = scanner.scan.getAsXML();
+	    			
+	    		String s = null;
+	    		
+	    		if (!l.paramsExtracted)
+	    		{
+		    		s = xml.getAttribute("scaleX");
+		    		if (s.length() > 0)
+		    			l.scale.setX( Double.parseDouble(s) );
+		    		s = xml.getAttribute("scaleY");
+		    		if (s.length() > 0)
+		    			l.scale.setY( Double.parseDouble(s) );
+		    		s = xml.getAttribute("angle");
+		    		if (s.length() > 0)
+		    			l.rotation.setAngle( Double.parseDouble(s) );
+	    		}
+	    		
+	    		s = xml.getAttribute("x");
+	    		if (s.length() > 0)
+	    			l.setTranslateX( Double.parseDouble(s) );
+	    		s = xml.getAttribute("y");
+	    		if (s.length() > 0)
+	    			l.setTranslateY( Double.parseDouble(s) );	
+	    	}
+	    	else
+	    	{
+		    	//set position to current location
+		    	Point2D p = getLocalMouseCoords();//selectedLayer.sceneToLocal( 0, 0 );
+		    	l.setTranslateX(p.getX());
+		    	l.setTranslateY(p.getY());
+		    	
+		    	if (!l.paramsExtracted)
+	    		{
+			    	Point2D s = selectedLayer.getLocalToSceneScale();
+			    	l.scale.setX( 200.0/s.getX() );
+			    	l.scale.setY( 200.0/s.getX() );
+	    		}
+	    	}
+    		
+    		
+    		//if the image is being added to an imagesGroup, then the translation needs to be adjusted occording to the imageGroup's offset
+    		if (imagesGroup)
+    		{
+    			Point2D p = new Point2D(l.getTranslateX(),l.getTranslateY());
+    			Point2D pPrime = p.subtract(lAdd.getTranslateX(),lAdd.getTranslateY());
+    			l.setTranslateX(pPrime.getX());
+    			l.setTranslateY(pPrime.getY());
+    		}
+    		
+    		lAdd.getChildren().add(l);
+    		
+    		if (SampleNavigator.scanner != null)
+    			SampleNavigator.scanner.moveToFront();
+    	}
+    	if (fc.getSelectedExtensionFilter() == filterNanonis)
+    	{
+    		NanonisSTMImageLayer l = new NanonisSTMImageLayer();
     		
     		//l.imgName = openFile.toURI().toString();
     		URI f1 = new File(workingDirectory).toURI();
