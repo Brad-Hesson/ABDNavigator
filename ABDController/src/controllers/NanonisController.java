@@ -79,24 +79,24 @@ public class NanonisController implements ABDControllerInterface {
     }
 
     private void updateCov(String name) {
-        int n = cov.get(name);
-        cov.put(name, n + 1);
-        int newCov = 0;
-        for (int v : cov.values()) {
-            newCov += (v == 0) ? 1 : 0;
-        }
-        if (newCov != covLen) {
-            log("New coverage: " + name);
-            // String s = "";
-            // for (Entry<String, Integer> entry : cov.entrySet()) {
-            // if (entry.getValue() == 0) {
-            // s += entry.getKey();
-            // s += ", ";
-            // }
-            // }
-            // log(s);
-            covLen = newCov;
-        }
+        // int n = cov.get(name);
+        // cov.put(name, n + 1);
+        // int newCov = 0;
+        // for (int v : cov.values()) {
+        //     newCov += (v == 0) ? 1 : 0;
+        // }
+        // if (newCov != covLen) {
+        //     log("New coverage: " + name);
+        //     // String s = "";
+        //     // for (Entry<String, Integer> entry : cov.entrySet()) {
+        //     // if (entry.getValue() == 0) {
+        //     // s += entry.getKey();
+        //     // s += ", ";
+        //     // }
+        //     // }
+        //     // log(s);
+        //     covLen = newCov;
+        // }
     }
 
     @Override
@@ -125,7 +125,6 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     // Coords are window-space: (-1 <-> 1) within the current scanning window
     public void moveTipTo(double x, double y) {
-        log("MoveTipTo " + x + "," + y);
         tipIsMoving = true;
         double[] xy = ABDController.imageToScannerCoords(this, new double[] { x, y });
         new Thread() {
@@ -144,7 +143,6 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public boolean tipIsMoving() {
         updateCov("tipIsMoving");
-        log("tipIsMoving: " + tipIsMoving);
         return tipIsMoving;
     }
 
@@ -203,7 +201,6 @@ public class NanonisController implements ABDControllerInterface {
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
         }
-        log("Scan Pos: " + xy[0] + "," + xy[1]);
         return xy;
     }
 

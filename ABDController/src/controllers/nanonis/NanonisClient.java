@@ -83,7 +83,6 @@ public class NanonisClient implements AutoCloseable {
 
     synchronized public double[] FolMeXYPosGet(boolean waitNewestData)
             throws IOException, NanonisException, ResponseException {
-        log("FolMe.XYPosGet");
         String name = "FolMe.XYPosGet";
         out.writeHeader(name, 4);
         out.writeBool(waitNewestData);
@@ -126,7 +125,6 @@ public class NanonisClient implements AutoCloseable {
 
     synchronized public float[] ScanXYPosGet(boolean waitNewestData)
             throws IOException, NanonisException, ResponseException {
-        log("Scan.XYPosGet");
         String name = "Scan.XYPosGet";
         out.writeHeader(name, 4);
         out.writeBool(waitNewestData);
@@ -141,7 +139,6 @@ public class NanonisClient implements AutoCloseable {
 
     synchronized public ScanData ScanFrameDataGrab(long channelIndex, boolean scanDirectionForward)
             throws IOException, NanonisException, ResponseException, UnsignedException {
-        log("Scan.FrameDataGrab");
         String name = "Scan.FrameDataGrab";
         out.writeHeader(name, 8);
         out.writeUInt32(channelIndex);
