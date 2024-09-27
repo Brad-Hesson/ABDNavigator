@@ -20,22 +20,22 @@ public class NanonisClientPool {
         for (int i = 0; i < ports.length; i++) {
             NanonisClient client = getClient();
             client.shutdown();
-            System.out.println("A client was shutdown");
             Thread.onSpinWait();
         }
     }
 
     public NanonisClient getClient() {
+        NanonisClient client;
         while (true) {
-            NanonisClient client;
             try {
                 client = clients.pop();
             } catch (EmptyStackException e) {
                 Thread.onSpinWait();
                 continue;
             }
-            return client;
+            break;
         }
+        return client;
     }
 
     public void returnClient(NanonisClient client) {

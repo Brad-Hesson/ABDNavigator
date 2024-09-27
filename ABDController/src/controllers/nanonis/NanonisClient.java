@@ -41,7 +41,6 @@ public class NanonisClient implements AutoCloseable {
     public void close() { // implementation for AutoClose, it sends the client back to the pool
         if (pool != null) {
             pool.returnClient(this);
-            System.out.println("A client was returned automatically");
         }
     }
 
