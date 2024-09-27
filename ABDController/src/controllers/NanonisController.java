@@ -26,7 +26,7 @@ import main.CurrentSignal;
 
 public class NanonisController implements ABDControllerInterface {
 
-    private NanonisClientPool clients;
+    private NanonisClientPool pool;
     private ScanFrameTTL scanFrame;
 
     private BiasSignal biasSignal;
@@ -43,11 +43,11 @@ public class NanonisController implements ABDControllerInterface {
         super();
 
         try {
-            clients = new NanonisClientPool();
+            pool = new NanonisClientPool("127.0.0.1");
         } catch (IOException e) {
             e.printStackTrace();
         }
-        scanFrame = new ScanFrameTTL(clients);
+        scanFrame = new ScanFrameTTL(pool);
 
         biasSignal = new BiasSignal(this);
         biasSignal.units = "V";
@@ -103,24 +103,20 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void exit() {
         updateCov("exit");
-        // try {
-        // biasClient.close();
-        // client.close();
-        // } catch (IOException e) {
-        // e.printStackTrace();
-        // }
+        try {
+            pool.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public double getZ() {
         updateCov("getZ");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             return client.ZCtrlZPosGet();
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return 0;
     }
@@ -135,15 +131,12 @@ public class NanonisController implements ABDControllerInterface {
         double[] xy = ABDController.imageToScannerCoords(this, new double[] { x, y });
         new Thread() {
             public void run() {
-                NanonisClient client = clients.getClient();
-                try {
+                try (NanonisClient client = pool.getClient()) {
                     client.FolMeXYPosSet(xy[0] / 1e9, xy[1] / 1e9, true);
                     tipIsMoving = false;
                     log("MoveTipTo move done");
                 } catch (IOException | NanonisException | ResponseException e) {
                     e.printStackTrace();
-                } finally {
-                    clients.returnClient(client);
                 }
             }
         }.start();
@@ -161,16 +154,13 @@ public class NanonisController implements ABDControllerInterface {
     // window
     public double[] getTipPosition() {
         double[] xy = new double[] { 0, 0 };
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             xy = client.FolMeXYPosGet(true);
             xy[0] *= 1e9;
             xy[1] *= 1e9;
             xy = ABDController.scannerToImageCoords(this, xy);
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         log("Tip Pos: " + xy[0] + "," + xy[1]);
         return xy;
@@ -179,8 +169,7 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void setTipSpeed(double s) {
         updateCov("setTipSpeed");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.ScanSpeedSet(
                     (float) (s / 1e9),
                     (float) (s / 1e9),
@@ -190,8 +179,6 @@ public class NanonisController implements ABDControllerInterface {
                     1f);
         } catch (IOException | NanonisException | ResponseException | UnsignedException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -199,14 +186,11 @@ public class NanonisController implements ABDControllerInterface {
     public double getTipSpeed() {
         updateCov("getTipSpeed");
         double speed = 0;
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             ScanSpeed speedSetting = client.ScanSpeedGet();
             speed = (double) Math.round(speedSetting.fSpeedMps() * 1e12f) / 1e3d;
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return speed;
     }
@@ -215,13 +199,10 @@ public class NanonisController implements ABDControllerInterface {
     // Returned coords are physical-space
     public double[] getTipScanPosition() {
         double[] xy = new double[] { 0, 0 };
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             xy = client.FolMeXYPosGet(true);
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         log("Scan Pos: " + xy[0] + "," + xy[1]);
         return xy;
@@ -236,13 +217,10 @@ public class NanonisController implements ABDControllerInterface {
             System.err.println("[NANONIS] Err: setZOffset can only run if the feedback controller is off");
         }
         double newHeight = surfaceHeightWas.get().doubleValue() + offset;
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.ZCtrlZPosSet((float) newHeight);
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -250,13 +228,10 @@ public class NanonisController implements ABDControllerInterface {
     public double getBias() {
         updateCov("getBias");
         double bias = 0;
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             bias = client.BiasGet();
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return bias;
     }
@@ -264,13 +239,10 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void setBias(double Vb) {
         updateCov("setBias");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.BiasSet((float) Vb);
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -298,13 +270,10 @@ public class NanonisController implements ABDControllerInterface {
     public double getCurrent() {
         updateCov("getCurrent");
         float setpoint = 0;
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             setpoint = client.ZCtrlSetpntGet();
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return setpoint;
     }
@@ -312,13 +281,10 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public double getMeasuredCurrent() {
         updateCov("getMeasuredCurrent");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             return client.CurrentGet();
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return 0;
     }
@@ -326,13 +292,10 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void setCurrent(double I) {
         updateCov("setCurrent");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.ZCtrlSetpntSet((float) I);
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -347,8 +310,7 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void setFeedback(boolean fb) {
         updateCov("setFeedback");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             if (fb) {
                 surfaceHeightWas = Optional.empty();
             } else {
@@ -357,8 +319,6 @@ public class NanonisController implements ABDControllerInterface {
             client.ZCtrlOnOffSet(fb);
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -380,14 +340,11 @@ public class NanonisController implements ABDControllerInterface {
     public double getScanWidth() {
         updateCov("getScanWidth");
         double width = 0;
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             scanFrame.maybeLoad();
             width = (double) Math.round(scanFrame.widthM * 1e12f) / 1e3d;
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return width;
     }
@@ -395,14 +352,11 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void setScanWidth(double w) {
         updateCov("setScanWidth");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             scanFrame.widthM = ((float) (w / 1e9));
             scanFrame.maybeStore();
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -410,14 +364,11 @@ public class NanonisController implements ABDControllerInterface {
     public double getScanHeight() {
         updateCov("getScanHeight");
         double height = 0;
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             scanFrame.maybeLoad();
             height = (double) Math.round(scanFrame.heightM * 1e12f) / 1e3d;
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return height;
     }
@@ -425,14 +376,11 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void setScanHeight(double h) {
         updateCov("setScanHeight");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             scanFrame.heightM = ((float) (h / 1e9));
             scanFrame.maybeStore();
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -440,14 +388,11 @@ public class NanonisController implements ABDControllerInterface {
     public int getPointsPerLine() {
         updateCov("getPointsPerLine");
         int ppl = 0;
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             ScanBuffer scanBuffer = client.ScanBufferGet();
             ppl = scanBuffer.pixelsPerLine();
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return ppl;
     }
@@ -455,8 +400,7 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void setPointsPerLine(int p) {
         updateCov("setPointsPerLine");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             ScanBuffer scanBuffer = client.ScanBufferGet();
             client.ScanBufferSet(
                     scanBuffer.channelIndexes(),
@@ -464,8 +408,6 @@ public class NanonisController implements ABDControllerInterface {
                     scanBuffer.linesPerScan());
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -473,14 +415,11 @@ public class NanonisController implements ABDControllerInterface {
     public int getNumLines() {
         updateCov("getNumLines");
         int numLines = 0;
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             ScanBuffer scanBuffer = client.ScanBufferGet();
             numLines = scanBuffer.linesPerScan();
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return numLines;
     }
@@ -488,8 +427,7 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void setNumLines(int n) {
         updateCov("setNumLines");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             ScanBuffer scanBuffer = client.ScanBufferGet();
             client.ScanBufferSet(
                     scanBuffer.channelIndexes(),
@@ -497,8 +435,6 @@ public class NanonisController implements ABDControllerInterface {
                     n);
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -506,14 +442,11 @@ public class NanonisController implements ABDControllerInterface {
     public int getScanAngle() {
         updateCov("getScanAngle");
         int angle = 0;
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             scanFrame.maybeLoad();
             angle = (int) -scanFrame.angleDeg;
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return angle;
     }
@@ -521,14 +454,11 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void setScanAngle(int angle) {
         updateCov("setScanAngle");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             scanFrame.angleDeg = -angle;
             scanFrame.maybeStore();
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -536,8 +466,7 @@ public class NanonisController implements ABDControllerInterface {
     public double[] getScanCenter() {
         updateCov("getScanCenter");
         double[] center = new double[] { 0, 0 };
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             scanFrame.maybeLoad();
             float x = scanFrame.centerXM;
             float y = scanFrame.centerYM;
@@ -545,8 +474,6 @@ public class NanonisController implements ABDControllerInterface {
             center[1] = (double) Math.round(y * 1e12f) / 1e3d;
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return center;
     }
@@ -554,15 +481,12 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void setScanCenter(double x, double y) {
         updateCov("setScanCenter");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             scanFrame.centerXM = ((float) (x / 1e9));
             scanFrame.centerYM = ((float) (y / 1e9));
             scanFrame.maybeStore();
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -570,13 +494,10 @@ public class NanonisController implements ABDControllerInterface {
     public double getScanRangeWidth() {
         updateCov("getScanRangeWidth");
         double width = 0;
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             width = client.PiezoRangeGet()[0] * 1e9;
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return width;
     }
@@ -585,13 +506,10 @@ public class NanonisController implements ABDControllerInterface {
     public double getScanRangeHeight() {
         updateCov("getScanRangeHeight");
         double height = 0;
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             height = client.PiezoRangeGet()[1] * 1e9;
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return height;
     }
@@ -602,14 +520,11 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void startUpScan() {
         updateCov("startUpScan");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             isScanning = true;
             client.ScanAction(ScanAction.START, true);
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         if (reportScanLines)
             new Thread() {
@@ -617,14 +532,11 @@ public class NanonisController implements ABDControllerInterface {
                     int lastLine = -1;
                     while (isScanning) {
                         ScanData scanData;
-                        NanonisClient client = clients.getClient();
-                        try {
+                        try (NanonisClient client = pool.getClient()) {
                             scanData = client.ScanFrameDataGrab(14, true);
                         } catch (Exception e) {
                             e.printStackTrace();
                             continue;
-                        } finally {
-                            clients.returnClient(client);
                         }
                         scanDirUp = scanData.scanDirUp();
                         int line = computeNewestLine(scanData);
@@ -681,14 +593,11 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void stopScan() {
         updateCov("stopScan");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             isScanning = false;
             client.ScanAction(ScanAction.STOP, false);
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -707,27 +616,21 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void withdraw() {
         updateCov("withdraw");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.ZCtrlWithdraw(true, -1);
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
     @Override
     public void autoApproach() {
         updateCov("autoApproach");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.AutoApproachOpen();
             client.AutoApproachOnOffSet(true);
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -740,16 +643,13 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void setCoarseAmplitude(int amp) {
         updateCov("setCoarseAmplitude");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             for (int axis = 1; axis <= 3; axis++) {
                 float[] freqAmp = client.MotorFreqAmpGet(axis);
                 client.MotorFreqAmpSet(freqAmp[0], amp, axis);
             }
         } catch (IOException | NanonisException | ResponseException | UnsignedException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
@@ -772,86 +672,67 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void retract() {
         updateCov("retract");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.MotorStartMove(Direction.Z_POS, courseSteps, courseGroup, true);
         } catch (IOException | NanonisException | ResponseException | UnsignedException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
     @Override
     public void coarseApproach() {
         updateCov("coarseApproach");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.MotorStartMove(Direction.Z_NEG, courseSteps, courseGroup, true);
         } catch (IOException | NanonisException | ResponseException | UnsignedException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
     @Override
     public void moveXPlus() {
         updateCov("moveXPlus");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.MotorStartMove(Direction.X_POS, courseSteps, courseGroup, true);
         } catch (IOException | NanonisException | ResponseException | UnsignedException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
     @Override
     public void moveXMinus() {
         updateCov("moveXMinus");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.MotorStartMove(Direction.X_NEG, courseSteps, courseGroup, true);
         } catch (IOException | NanonisException | ResponseException | UnsignedException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
     @Override
     public void moveYPlus() {
         updateCov("moveYPlus");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.MotorStartMove(Direction.Y_POS, courseSteps, courseGroup, true);
         } catch (IOException | NanonisException | ResponseException | UnsignedException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
     @Override
     public void moveYMinus() {
         updateCov("moveYMinus");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.MotorStartMove(Direction.Y_NEG, courseSteps, courseGroup, true);
         } catch (IOException | NanonisException | ResponseException | UnsignedException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
     @Override
     public void setContinuousScanEnabled(boolean b) {
         updateCov("setContinuousScanEnabled");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             ScanProps props = client.ScanPropsGet();
             client.ScanPropsSet(
                     b,
@@ -862,21 +743,16 @@ public class NanonisController implements ABDControllerInterface {
                     new String[0]);
         } catch (IOException | NanonisException | ResponseException | UnsignedException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
     @Override
     public boolean isContinuousScanEnabled() {
         updateCov("isContinuousScanEnabled");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             return client.ScanPropsGet().continuousScan();
         } catch (IOException | NanonisException | ResponseException | UnsignedException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
         return false;
     }
@@ -898,26 +774,20 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void zRamp() {
         updateCov("zRamp");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.TipShaperStart(true, -1);
         } catch (IOException | NanonisException | ResponseException | UnsignedException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 
     @Override
     public void vPulse(float voltage, float width) {
         updateCov("vPulse");
-        NanonisClient client = clients.getClient();
-        try {
+        try (NanonisClient client = pool.getClient()) {
             client.BiasPulse(true, width, voltage, 0, 0);
         } catch (IOException | NanonisException | ResponseException | UnsignedException e) {
             e.printStackTrace();
-        } finally {
-            clients.returnClient(client);
         }
     }
 

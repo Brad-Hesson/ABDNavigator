@@ -15,11 +15,12 @@ import controllers.nanonis.records.ScanSpeed;
 import controllers.nanonis.records.SpeedSetting;
 import controllers.nanonis.records.TipShaperProps;
 
-public class NanonisClient {
+public class NanonisClient implements AutoCloseable {
     private static boolean LOG = true;
     private Socket clientSocket;
     private TypeWriter out;
     private TypeReader in;
+    private NanonisClientPool pool;
 
     public NanonisClient(String host, int port) throws UnknownHostException, IOException {
         super();
@@ -28,12 +29,28 @@ public class NanonisClient {
         in = new TypeReader(new DataInputStream(clientSocket.getInputStream()));
     }
 
+    public NanonisClient(String host, int port, NanonisClientPool pool) throws UnknownHostException, IOException {
+        super();
+        clientSocket = new Socket(host, port);
+        out = new TypeWriter(clientSocket.getOutputStream());
+        in = new TypeReader(new DataInputStream(clientSocket.getInputStream()));
+        this.pool = pool;
+    }
+
+    @Override
+    public void close() { // implementation for AutoClose, it sends the client back to the pool
+        if (pool != null) {
+            pool.returnClient(this);
+            System.out.println("A client was returned automatically");
+        }
+    }
+
     private void log(String m) {
         if (LOG)
             System.out.println("[NANONIS CLIENT] " + m);
     }
 
-    synchronized public void close() throws IOException {
+    synchronized public void shutdown() throws IOException {
         clientSocket.close();
     }
 
@@ -577,4 +594,5 @@ public class NanonisClient {
         NanonisException.checkError(in.readError());
         return props;
     }
+
 }

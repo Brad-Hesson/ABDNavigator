@@ -9,10 +9,19 @@ public class NanonisClientPool {
     static int[] ports = new int[] { 6501, 6502, 6503, 6504 };
     Stack<NanonisClient> clients = new Stack<>();
 
-    public NanonisClientPool() throws UnknownHostException, IOException {
+    public NanonisClientPool(String host) throws UnknownHostException, IOException {
         super();
         for (int i = 0; i < ports.length; i++) {
-            clients.push(new NanonisClient("127.0.0.1", ports[i]));
+            clients.push(new NanonisClient(host, ports[i], this));
+        }
+    }
+
+    public void close() throws IOException {
+        for (int i = 0; i < ports.length; i++) {
+            NanonisClient client = getClient();
+            client.shutdown();
+            System.out.println("A client was shutdown");
+            Thread.onSpinWait();
         }
     }
 
