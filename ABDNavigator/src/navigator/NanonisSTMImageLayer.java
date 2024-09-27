@@ -2,37 +2,18 @@ package navigator;
 
 //import BufferedSTMImage;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.nio.DoubleBuffer;
-import java.nio.ByteOrder;
-import java.nio.CharBuffer;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.Vector;
-import java.util.Hashtable;
-import java.util.Iterator;
 
 import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
 
 import org.apache.commons.math3.complex.Complex;
 import org.apache.commons.math3.transform.DftNormalization;
@@ -43,36 +24,29 @@ import org.w3c.dom.Element;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.Node;
-import javafx.scene.image.Image;
 import main.ABDPythonAPIClient;
 import main.SampleNavigator;
 import util.FFT2D;
 
 import org.json.simple.JSONObject;
 import org.json.simple.JSONArray;
-import org.json.simple.parser.ParseException;
 import org.json.simple.parser.JSONParser;
 
 public class NanonisSTMImageLayer extends ImageLayer {
-	private float[][] upTraceForwardData;
-	private float[][] upTraceBackwardData;
-	private float[][] downTraceForwardData;
-	private float[][] downTraceBackwardData;
+	private float[][] forwardZData;
+	private float[][] backwardZData;
+	private float[][] forwardCurrentData;
+	private float[][] backwardCurrentData;
 
 	private int pixWidth = 0;
 	private int pixHeight = 0;
 
 	private static BufferedSTMImage bImg = null;
 
-	private String imageDirection = "upForward";
+	private String imageChannel = "Z Forward";
 
 	private float minZFraction = 0;
 	private float maxZFraction = 1;
-
-	private int capturedLinesStart = 0;
-	private int capturedLinesEnd = 0;
-	private int capturedLinesU = 0;
-	private int capturedLinesD = 0;
 
 	private int colorSchemeIdx = 0;
 
@@ -88,6 +62,14 @@ public class NanonisSTMImageLayer extends ImageLayer {
 	public double latticeAngle = 0;
 	public double detectionContrast = 0.6;
 	public double predictionThreshold = 0.5;
+
+	public boolean paramsExtracted = false;
+	public double zFactor = 1;
+	private double bias = 2; // V
+	private double current = 0.01; // nA
+	public double scaleX0 = 100; // nm
+	public double scaleY0 = 100; // nm
+	public double angle0 = 0; // deg
 
 	public NanonisSTMImageLayer() {
 		super();
@@ -109,7 +91,7 @@ public class NanonisSTMImageLayer extends ImageLayer {
 		tabs.put("training", new String[] { "addExample", "clearExamples" });
 		tabs.put("settings", new String[] { "sampleBias", "current" });
 		categories.put("colorSchemeIndex", new String[] { "0", "1", "2", "3" });
-		categories.put("imageDirection", new String[] { "upForward", "upBackward", "downForward", "downBackward" });
+		categories.put("imageChannel", new String[] { "Z Forward", "Z Backward", "Current Forward", "Current Backward" });
 		categories.put("lineByLineFlatten", new String[] { "true", "false" });
 		categories.put("planeSubtract", new String[] { "true", "false" });
 		units.put("latticeExpectedSpacing", "nm");
@@ -163,14 +145,11 @@ public class NanonisSTMImageLayer extends ImageLayer {
 		}
 
 		zFactor = 1;
-		zOffset = 0;
-		upTraceForwardData = transpose(sxm.images.get("Z")[0]);
-		upTraceBackwardData = transpose(sxm.images.get("Z")[1]);
-		downTraceForwardData = transpose(sxm.images.get("Current")[0]);
-		downTraceBackwardData = transpose(sxm.images.get("Current")[1]);
-		capturedLinesU = sxm.yPixels;
-		capturedLinesD = sxm.yPixels;
-		currentImageData = upTraceForwardData;
+		forwardZData = imageTranspose(sxm.images.get("Z")[0]);
+		backwardZData = imageFlip(imageTranspose(sxm.images.get("Z")[1]));
+		forwardCurrentData = imageTranspose(sxm.images.get("Current")[0]);
+		backwardCurrentData = imageFlip(imageTranspose(sxm.images.get("Current")[1]));
+		currentImageData = forwardZData;
 		scaleX0 = Float.parseFloat(sxm.params.get("SCAN_RANGE").trim().split("\s+")[0]) * 1e9;
 		scaleY0 = Float.parseFloat(sxm.params.get("SCAN_RANGE").trim().split("\s+")[1]) * 1e9;
 		angle0 = Float.parseFloat(sxm.params.get("SCAN_ANGLE").trim());
@@ -183,125 +162,60 @@ public class NanonisSTMImageLayer extends ImageLayer {
 						.findFirst()
 						.get()
 						.strip()
-						.split("[\t\s]+")[3]);
+						.split("[\t\s]+")[3])
+				* 1e9;
 		paramsExtracted = true;
-		nmFromIdx = scaleX0 / xPixels * 1e9;
+		nmFromIdx = scaleX0 / pixWidth * 1e9;
 		nmFromZ = 1e9 / zFactor;
 		pixWidth = sxm.xPixels;
 		pixHeight = sxm.yPixels;
 		imageLoaded = true;
 
-		float min = Float.MAX_VALUE;
-		float max = -Float.MAX_VALUE;
-		for (int xIdx = 0; xIdx < pixWidth; xIdx++) {
-			for (int yIdx = 0; yIdx < pixHeight; yIdx++) {
-				min = Math.min(min, upTraceForwardData[xIdx][yIdx]);
-				max = Math.max(max, upTraceForwardData[xIdx][yIdx]);
-			}
-		}
+		// need to init with a dummy image first
 		float[][] fData = new float[pixWidth][pixHeight];
-		for (int xIdx = 0; xIdx < pixWidth; xIdx++) {
-			for (int yIdx = 0; yIdx < pixHeight; yIdx++) {
-				fData[xIdx][yIdx] = (upTraceForwardData[xIdx][yIdx] - min) / (max - min);
-			}
-		}
-
 		bImg = new BufferedSTMImage(fData);
-		bImg.colorSchemeIdx = colorSchemeIdx;
-
-		bImg.draw();
 		initFromImage(SwingFXUtils.toFXImage(bImg, null));
 
-		setImageDirection(imageDirection);
+		// the actual image gets loaded here
+		setImageChannel(imageChannel);
+
 		planeFitOnInit();
 	}
 
-	private float[][] transpose(float[][] data) {
-		int X = data.length;
-		int Y = data[0].length;
+	private float[][] imageTranspose(float[][] image) {
+		int X = image.length;
+		int Y = image[0].length;
 		float[][] out = new float[Y][X];
 		for (int i = 0; i < X; i++) {
 			for (int j = 0; j < Y; j++) {
-				out[j][i] = data[i][j];
+				out[j][i] = image[i][j];
 			}
 		}
 		return out;
 	}
 
-	public double zFactor = 1;
-	private double zOffset = 0;
-	private int xPixels = 1;
-	private int yPixels = 1;
-	private double bias = 2; // V
-	private double current = 0.01; // nA
-	public double scaleX0 = 100; // nm
-	public double scaleY0 = 100; // nm
-	public double angle0 = 0; // deg
-	public boolean paramsExtracted = false;
-
-	public void setImageDirection(String s) {
-		imageDirection = s;
-		if (s.equalsIgnoreCase("upForward")) {
-			capturedLinesStart = 1;
-			capturedLinesEnd = capturedLinesU - 1;
-			setImageTo(upTraceForwardData);
-		} else if (s.equalsIgnoreCase("upBackward")) {
-			capturedLinesStart = 1;
-			capturedLinesEnd = capturedLinesU - 1;
-			setImageTo(upTraceBackwardData);
-		} else if (s.equalsIgnoreCase("downForward")) {
-			capturedLinesStart = pixHeight - capturedLinesD + 1;
-			capturedLinesEnd = pixHeight;
-			setImageTo(downTraceForwardData);
-		} else if (s.equalsIgnoreCase("downBackward")) {
-			capturedLinesStart = pixHeight - capturedLinesD + 1;
-			capturedLinesEnd = pixHeight;
-			setImageTo(downTraceBackwardData);
+	private float[][] imageFlip(float[][] image) {
+		int rows = image.length;
+		float[] tempRow;
+		for (int i = 0; i < rows / 2; i++) {
+			tempRow = image[i];
+			image[i] = image[rows - i - 1];
+			image[rows - i - 1] = tempRow;
 		}
+		return image;
 	}
 
-	public void imageLeftRight() {
-		if (imageDirection.equals("upForward")) {
-			imageUpBackward();
-		} else if (imageDirection.equals("upBackward")) {
-			imageUpForward();
-		} else if (imageDirection.equals("downForward")) {
-			imageDownBackward();
-		} else if (imageDirection.equals("downBackward")) {
-			imageDownForward();
+	public void setImageChannel(String s) {
+		imageChannel = s;
+		if (s.equalsIgnoreCase("Z Forward")) {
+			setImageTo(forwardZData);
+		} else if (s.equalsIgnoreCase("Z Backward")) {
+			setImageTo(backwardZData);
+		} else if (s.equalsIgnoreCase("Current Forward")) {
+			setImageTo(forwardCurrentData);
+		} else if (s.equalsIgnoreCase("Current Backward")) {
+			setImageTo(backwardCurrentData);
 		}
-	}
-
-	public void imageUpDown() {
-		if (imageDirection.equals("upForward")) {
-			imageDownForward();
-		} else if (imageDirection.equals("upBackward")) {
-			imageDownBackward();
-		} else if (imageDirection.equals("downForward")) {
-			imageUpForward();
-		} else if (imageDirection.equals("downBackward")) {
-			imageUpBackward();
-		}
-	}
-
-	public void imageUpForward() {
-		setImageDirection("upForward");
-		// setImageTo(upTraceForwardData);
-	}
-
-	public void imageUpBackward() {
-		setImageDirection("upBackward");
-		// setImageTo(upTraceBackwardData);
-	}
-
-	public void imageDownForward() {
-		setImageDirection("downForward");
-		// setImageTo(downTraceForwardData);
-	}
-
-	public void imageDownBackward() {
-		setImageDirection("downBackward");
-		// setImageTo(downTraceBackwardData);
 	}
 
 	public boolean planeSubtract = true;
@@ -326,142 +240,21 @@ public class NanonisSTMImageLayer extends ImageLayer {
 		if (data == null)
 			return;
 
-		/*
-		 * //test algorithms
-		 * capturedLinesEnd = 50;
-		 * float xSlope = 0.5f;
-		 * float ySlope = 2f;
-		 * for (int y = 0; y < data.length; y ++)
-		 * {
-		 * for (int x = 0; x < data[0].length; x ++)
-		 * {
-		 * float z = xSlope*x + ySlope*y;
-		 * data[x][y] = z;
-		 * }
-		 * }
-		 * //end algorithm test
-		 * 
-		 */
+		float[][] fData = imageClone(data);
 
-		float[][] fData = new float[pixWidth][pixHeight];
-		for (int yIdx = 0; yIdx < pixHeight; yIdx++) {
-			for (int xIdx = 0; xIdx < pixWidth; xIdx++) {
-				fData[xIdx][yIdx] = data[xIdx][yIdx];
-			}
-		}
-		// System.out.println(capturedLinesStart + " to " + capturedLinesEnd);
-
-		double dzdxAve = 0;
-		double dzdyAve = 0;
 		if (planeSubtract) {
 			// if also doing a line by line flatten, do that both before and after the plane
 			// subtract
-			if (lineByLineFlatten) {
-				float[] diffs = new float[pixWidth];
-				// float[] medians = new float[pixHeight-1];
-				for (int yIdx = capturedLinesStart; yIdx < capturedLinesEnd - 2; yIdx++) {
-					for (int xIdx = 0; xIdx < pixWidth; xIdx++) {
-						diffs[xIdx] = fData[xIdx][yIdx + 1] - fData[xIdx][yIdx];
-					}
+			if (lineByLineFlatten)
+				imageLineSubtract(fData);
 
-					float median = median(diffs);
-
-					for (int xIdx = 0; xIdx < pixWidth; xIdx++) {
-						fData[xIdx][yIdx + 1] -= median;
-					}
-				}
-			}
-
-			// now do the plane subtract
-			for (int yIdx = capturedLinesStart; yIdx < capturedLinesEnd; yIdx++) {
-				dzdxAve += fData[pixWidth - 1][yIdx] - fData[0][yIdx];
-			}
-
-			for (int xIdx = 0; xIdx < pixWidth - 1; xIdx++) {
-				dzdyAve += fData[xIdx][capturedLinesEnd - 1] - fData[xIdx][capturedLinesStart];
-			}
-
-			dzdxAve /= ((pixWidth - 1) * (capturedLinesEnd - capturedLinesStart));
-			dzdyAve /= ((pixWidth - 1) * (capturedLinesEnd - capturedLinesStart - 1));
-
-			if ((dzdx != 0) || (dzdy != 0)) {
-				// dzdxAve = dzdx;
-				// dzdyAve = dzdy;
-				/*
-				 * float min = fData[0][capturedLinesStart];
-				 * float max = fData[0][capturedLinesStart];
-				 * 
-				 * for (int xIdx = 0; xIdx < pixWidth-1; xIdx ++)
-				 * {
-				 * for (int yIdx = capturedLinesStart; yIdx < capturedLinesEnd; yIdx ++)
-				 * {
-				 * if (min > fData[xIdx][yIdx])
-				 * min = fData[xIdx][yIdx];
-				 * if (max < fData[xIdx][yIdx])
-				 * max = fData[xIdx][yIdx];
-				 * }
-				 * }
-				 * System.out.println("min max: " + min + "  " + max);
-				 * //double f = (max - min)/pixWidth;
-				 * double f = (max - min)*(nmFromIdx)/256.0/nmFromZ;
-				 */
-				double f = nmFromIdx / nmFromZ;
-
-				System.out.println("prev dzdx,dzdy: " + dzdxAve + "," + dzdyAve);
-				dzdxAve = f * dzdx;
-				dzdyAve = f * dzdy;
-				System.out.println("new dzdx,dzdy: " + dzdxAve + "," + dzdyAve);
-			}
-
-			// System.out.println("slopes: " + dzdxAve + " " + dzdyAve);
-
-			for (int yIdx = 0; yIdx < pixHeight; yIdx++) {
-				for (int xIdx = 0; xIdx < pixWidth; xIdx++) {
-					fData[xIdx][yIdx] -= (float) (dzdxAve * xIdx + dzdyAve * yIdx);
-				}
-			}
+			imagePlaneSubtract(fData);
 		}
 
-		if (lineByLineFlatten) {
-			float[] diffs = new float[pixWidth];
-			// float[] medians = new float[pixHeight-1];
-			for (int yIdx = capturedLinesStart; yIdx < capturedLinesEnd - 2; yIdx++) {
-				for (int xIdx = 0; xIdx < pixWidth; xIdx++) {
-					diffs[xIdx] = fData[xIdx][yIdx + 1] - fData[xIdx][yIdx];
-				}
+		if (lineByLineFlatten)
+			imageLineSubtract(fData);
 
-				float median = median(diffs);
-
-				for (int xIdx = 0; xIdx < pixWidth; xIdx++) {
-					fData[xIdx][yIdx + 1] -= median;
-				}
-			}
-		}
-
-		float min = 0;
-		float max = 0;
-		for (int yIdx = capturedLinesStart; yIdx < capturedLinesEnd; yIdx++) {
-			for (int xIdx = 0; xIdx < pixWidth; xIdx++) {
-				float val = fData[xIdx][yIdx];
-
-				if ((xIdx == 0) && (yIdx == capturedLinesStart)) {
-					max = val;
-					min = val;
-				}
-				if (max < val)
-					max = val;
-				if (min > val)
-					min = val;
-			}
-		}
-
-		System.out.println("new min max: " + min + "  " + max);
-
-		for (int xIdx = 0; xIdx < pixWidth; xIdx++) {
-			for (int yIdx = 0; yIdx < pixHeight; yIdx++) {
-				fData[xIdx][yIdx] = (fData[xIdx][yIdx] - min) / (max - min);
-			}
-		}
+		imageNormalize(fData);
 
 		bImg = new BufferedSTMImage(fData);
 		bImg.colorSchemeIdx = this.colorSchemeIdx;
@@ -472,6 +265,75 @@ public class NanonisSTMImageLayer extends ImageLayer {
 
 		setImage(SwingFXUtils.toFXImage(bImg, null));
 		currentImageData = data;
+	}
+
+	private float[][] imageClone(float[][] image) {
+		int width = image.length;
+		int height = image[0].length;
+		float[][] fData = new float[width][height];
+		for (int yIdx = 0; yIdx < height; yIdx++) {
+			for (int xIdx = 0; xIdx < width; xIdx++) {
+				fData[xIdx][yIdx] = image[xIdx][yIdx];
+			}
+		}
+		return fData;
+	}
+
+	private void imagePlaneSubtract(float[][] image) {
+		int width = image.length;
+		int height = image[0].length;
+		double dzdxAve = 0;
+		double dzdyAve = 0;
+
+		// now do the plane subtract
+		for (int yIdx = 0; yIdx < height; yIdx++) {
+			dzdxAve += image[width - 1][yIdx] - image[0][yIdx];
+		}
+		for (int xIdx = 0; xIdx < width; xIdx++) {
+			dzdyAve += image[xIdx][height - 1] - image[xIdx][0];
+		}
+		dzdxAve /= width * height;
+		dzdyAve /= width * height;
+		for (int yIdx = 0; yIdx < height; yIdx++) {
+			for (int xIdx = 0; xIdx < width; xIdx++) {
+				image[xIdx][yIdx] -= (float) (dzdxAve * xIdx + dzdyAve * yIdx);
+			}
+		}
+	}
+
+	private void imageLineSubtract(float[][] image) {
+		int width = image.length;
+		int height = image[0].length;
+		float[] diffs = new float[width];
+		for (int yIdx = 0; yIdx < height - 1; yIdx++) {
+			for (int xIdx = 0; xIdx < width; xIdx++) {
+				diffs[xIdx] = image[xIdx][yIdx + 1] - image[xIdx][yIdx];
+			}
+
+			float median = median(diffs);
+
+			for (int xIdx = 0; xIdx < width; xIdx++) {
+				image[xIdx][yIdx + 1] -= median;
+			}
+		}
+	}
+
+	private void imageNormalize(float[][] image) {
+		int width = image.length;
+		int height = image[0].length;
+		float min = Float.MAX_VALUE;
+		float max = -Float.MAX_VALUE;
+		for (int xIdx = 0; xIdx < width; xIdx++) {
+			for (int yIdx = 0; yIdx < height; yIdx++) {
+				min = Math.min(min, image[xIdx][yIdx]);
+				max = Math.max(max, image[xIdx][yIdx]);
+			}
+		}
+		for (int xIdx = 0; xIdx < width; xIdx++) {
+			for (int yIdx = 0; yIdx < height; yIdx++) {
+				image[xIdx][yIdx] = (image[xIdx][yIdx] - min) / (max - min);
+			}
+		}
 	}
 
 	public void setFromXML(Element xml, boolean deep) {
@@ -492,9 +354,9 @@ public class NanonisSTMImageLayer extends ImageLayer {
 		if (s.length() > 0)
 			lineByLineFlatten = Boolean.parseBoolean(s);
 
-		s = xml.getAttribute("imageDirection");
+		s = xml.getAttribute("imageChannel");
 		if (s.length() > 0)
-			imageDirection = new String(s);
+			imageChannel = new String(s);
 
 		s = xml.getAttribute("colorSchemeIndex");
 		if (s.length() > 0)
@@ -550,7 +412,7 @@ public class NanonisSTMImageLayer extends ImageLayer {
 
 		if (currentImageData != null) {
 			// setImageTo(currentImageData);
-			setImageDirection(imageDirection);
+			setImageChannel(imageChannel);
 		}
 	}
 
@@ -561,7 +423,7 @@ public class NanonisSTMImageLayer extends ImageLayer {
 		e.setAttribute("minZFraction", Float.toString(minZFraction));
 		e.setAttribute("planeSubtract", Boolean.toString(planeSubtract));
 		e.setAttribute("lineByLineFlatten", Boolean.toString(lineByLineFlatten));
-		e.setAttribute("imageDirection", imageDirection);
+		e.setAttribute("imageChannel", imageChannel);
 		e.setAttribute("colorSchemeIndex", Integer.toString(colorSchemeIdx));
 		// e.setAttribute("maximaThreshold", Integer.toString(maximaThreshold));
 		// e.setAttribute("maximaPrecision", Integer.toString(maximaPrecision));
@@ -708,16 +570,16 @@ public class NanonisSTMImageLayer extends ImageLayer {
 		// now do the plane subtract
 		float dzdxAve = 0;
 		float dzdyAve = 0;
-		for (int yIdx = capturedLinesStart; yIdx < capturedLinesEnd; yIdx++) {
+		for (int yIdx = 0; yIdx < pixHeight; yIdx++) {
 			dzdxAve += paddedData[pixWidth - 1][yIdx] - paddedData[0][yIdx];
 		}
 
-		for (int xIdx = 0; xIdx < pixWidth - 1; xIdx++) {
-			dzdyAve += paddedData[xIdx][capturedLinesEnd - 1] - paddedData[xIdx][capturedLinesStart];
+		for (int xIdx = 0; xIdx < pixWidth; xIdx++) {
+			dzdyAve += paddedData[xIdx][pixHeight - 1] - paddedData[xIdx][0];
 		}
 
-		dzdxAve /= ((pixWidth - 1) * (capturedLinesEnd - capturedLinesStart));
-		dzdyAve /= ((pixWidth - 1) * (capturedLinesEnd - capturedLinesStart - 1));
+		dzdxAve /= pixWidth * pixHeight;
+		dzdyAve /= pixWidth * pixHeight;
 
 		// System.out.println("slopes: " + dzdxAve + " " + dzdyAve);
 
