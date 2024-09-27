@@ -28,7 +28,7 @@ public class ABDController
 	
 	public static boolean testMode = false;
 	public static int sleepTime = 0;  //in units of ms
-	public static int dataLength = 90000;
+	public static int dataLength = 500;
 	public static int averages = 1;
 	public static int numAves = 1;
 	
@@ -971,21 +971,21 @@ public class ABDController
 				currentField.setText(numForm.format(currentSignal.get()));
 			}
 		} );
-		
+
 		
 		
 		//infinite loop recording various signals over time
 		data = new double[dataLength];
 		for (int i = 0; i < data.length; i ++)
-			data[i] = 0;
+		data[i] = 0;
 		
 		bias = new double[dataLength];
 		for (int i = 0; i < bias.length; i ++)
-			bias[i] = biasSignal.get();//controller.getBias();
+		bias[i] = 0;//controller.getBias();
 		
 		current = new double[dataLength];
 		for (int i = 0; i < current.length; i ++)
-			current[i] = currentSignal.getMeasuredValue();//controller.getCurrent();
+			current[i] = 0;//controller.getCurrent();
 		
 		Thread dataCollectionThread = new Thread()
 		{

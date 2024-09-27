@@ -54,7 +54,6 @@ public class NanonisClient implements AutoCloseable {
     }
 
     synchronized public float ZCtrlZPosGet() throws IOException, NanonisException, ResponseException {
-        log("ZCtrl.ZPosGet");
         String name = "ZCtrl.ZPosGet";
         out.writeHeader(name, 0);
         out.flush();
@@ -160,7 +159,7 @@ public class NanonisClient implements AutoCloseable {
 
     synchronized public void ZCtrlZPosSet(float zPosM)
             throws IOException, NanonisException, ResponseException {
-        log("ZCtrl.ZPosSet");
+        log("ZCtrl.ZPosSet: " + zPosM);
         String name = "ZCtrl.ZPosSet";
         out.writeHeader(name, 4);
         out.writeFloat32(zPosM);
@@ -196,7 +195,7 @@ public class NanonisClient implements AutoCloseable {
 
     synchronized public void ZCtrlSetpntSet(float setpoint)
             throws IOException, NanonisException, ResponseException {
-        log("ZCtrl.SetpntSet");
+        log("ZCtrl.SetpntSet: " + setpoint);
         String name = "ZCtrl.SetpntSet";
         out.writeHeader(name, 4);
         out.writeFloat32(setpoint);
@@ -208,7 +207,6 @@ public class NanonisClient implements AutoCloseable {
 
     synchronized public float ZCtrlSetpntGet()
             throws IOException, NanonisException, ResponseException {
-        log("ZCtrl.SetpntGet");
         String name = "ZCtrl.SetpntGet";
         out.writeHeader(name, 0);
         out.flush();
@@ -221,7 +219,6 @@ public class NanonisClient implements AutoCloseable {
 
     synchronized public float CurrentGet()
             throws IOException, NanonisException, ResponseException {
-        log("Current.Get");
         String name = "Current.Get";
         out.writeHeader(name, 0);
         out.flush();
@@ -380,7 +377,7 @@ public class NanonisClient implements AutoCloseable {
 
     synchronized public void MotorFreqAmpSet(float freqHz, float ampV, int axisSelector)
             throws IOException, NanonisException, ResponseException, UnsignedException {
-        log("Motor.FreqAmpSet");
+        log("Motor.FreqAmpSet: " + freqHz + " " + ampV);
         String name = "Motor.FreqAmpSet";
         out.writeHeader(name, 10);
         out.writeFloat32(freqHz);
@@ -398,7 +395,7 @@ public class NanonisClient implements AutoCloseable {
             long group,
             boolean waitUntilFinished)
             throws IOException, NanonisException, ResponseException, UnsignedException {
-        log("Motor.StartMove");
+        log("Motor.StartMove: " + direction + " " + numSteps);
         String name = "Motor.StartMove";
         out.writeHeader(name, 14);
         out.writeUInt32(direction.toInt());

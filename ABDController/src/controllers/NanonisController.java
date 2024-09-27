@@ -64,7 +64,6 @@ public class NanonisController implements ABDControllerInterface {
             Method[] methods = Class.forName("main.ABDControllerInterface").getDeclaredMethods();
             for (Method m : methods) {
                 String name = m.getName();
-                log(name);
                 cov.put(name, 0);
             }
             covLen = cov.size();
@@ -114,7 +113,7 @@ public class NanonisController implements ABDControllerInterface {
     public double getZ() {
         updateCov("getZ");
         try (NanonisClient client = pool.getClient()) {
-            return client.ZCtrlZPosGet();
+            return client.ZCtrlZPosGet() * 1e9;
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
         }
@@ -213,10 +212,10 @@ public class NanonisController implements ABDControllerInterface {
         updateCov("setZOffset");
         // I think this function wants to move the tip to a height relative to the
         // surface level when the feedback was turned off
-        if (!surfaceHeightWas.isPresent()) {
+        if (!surfaceHeightWas_nm.isPresent()) {
             System.err.println("[NANONIS] Err: setZOffset can only run if the feedback controller is off");
         }
-        double newHeight = surfaceHeightWas.get().doubleValue() + offset;
+        double newHeight = (surfaceHeightWas_nm.get().doubleValue() + offset) / 1e9;
         try (NanonisClient client = pool.getClient()) {
             client.ZCtrlZPosSet((float) newHeight);
         } catch (IOException | NanonisException | ResponseException e) {
@@ -271,7 +270,7 @@ public class NanonisController implements ABDControllerInterface {
         updateCov("getCurrent");
         float setpoint = 0;
         try (NanonisClient client = pool.getClient()) {
-            setpoint = client.ZCtrlSetpntGet();
+            setpoint = client.ZCtrlSetpntGet() * 1e9f;
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
         }
@@ -282,7 +281,7 @@ public class NanonisController implements ABDControllerInterface {
     public double getMeasuredCurrent() {
         updateCov("getMeasuredCurrent");
         try (NanonisClient client = pool.getClient()) {
-            return client.CurrentGet();
+            return client.CurrentGet() * 1e9f;
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
         }
@@ -293,7 +292,7 @@ public class NanonisController implements ABDControllerInterface {
     public void setCurrent(double I) {
         updateCov("setCurrent");
         try (NanonisClient client = pool.getClient()) {
-            client.ZCtrlSetpntSet((float) I);
+            client.ZCtrlSetpntSet((float) I / 1e9f);
         } catch (IOException | NanonisException | ResponseException e) {
             e.printStackTrace();
         }
@@ -305,16 +304,16 @@ public class NanonisController implements ABDControllerInterface {
         return this.currentSignal;
     }
 
-    private Optional<Double> surfaceHeightWas = Optional.empty();
+    private Optional<Double> surfaceHeightWas_nm = Optional.empty();
 
     @Override
     public void setFeedback(boolean fb) {
         updateCov("setFeedback");
         try (NanonisClient client = pool.getClient()) {
             if (fb) {
-                surfaceHeightWas = Optional.empty();
+                surfaceHeightWas_nm = Optional.empty();
             } else {
-                surfaceHeightWas = Optional.of(getZ());
+                surfaceHeightWas_nm = Optional.of(getZ());
             }
             client.ZCtrlOnOffSet(fb);
         } catch (IOException | NanonisException | ResponseException e) {
@@ -643,6 +642,7 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void setCoarseAmplitude(int amp) {
         updateCov("setCoarseAmplitude");
+        log("setCourseAmplitude: " + amp);
         try (NanonisClient client = pool.getClient()) {
             for (int axis = 1; axis <= 3; axis++) {
                 float[] freqAmp = client.MotorFreqAmpGet(axis);
@@ -658,6 +658,7 @@ public class NanonisController implements ABDControllerInterface {
     @Override
     public void setCoarseSteps(int steps) {
         updateCov("setCoarseSteps");
+        log("setCourseSteps: " + steps);
         courseSteps = steps;
     }
 
