@@ -25,7 +25,6 @@ public class NanonisClientPool {
                 Thread.onSpinWait();
                 continue;
             }
-            System.out.println("Remaining: " + clients.size());
             return client;
         }
     }
