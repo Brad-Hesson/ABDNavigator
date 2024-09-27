@@ -21,14 +21,11 @@ public class NanonisClient {
     private TypeWriter out;
     private TypeReader in;
 
-    public ScanFrameTTL scanFrame;
-
     public NanonisClient(String host, int port) throws UnknownHostException, IOException {
         super();
         clientSocket = new Socket(host, port);
         out = new TypeWriter(clientSocket.getOutputStream());
         in = new TypeReader(new DataInputStream(clientSocket.getInputStream()));
-        scanFrame = new ScanFrameTTL(this);
     }
 
     private void log(String m) {
@@ -43,7 +40,6 @@ public class NanonisClient {
     synchronized public float ZCtrlZPosGet() throws IOException, NanonisException, ResponseException {
         log("ZCtrl.ZPosGet");
         String name = "ZCtrl.ZPosGet";
-
         out.writeHeader(name, 0);
         out.flush();
         ResponseException.checkHeader(name, in.readHeader());
@@ -60,7 +56,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("FolMe.XYPosSet");
         String name = "FolMe.XYPosSet";
-
         out.writeHeader(name, 20);
         out.writeFloat64(xPosM);
         out.writeFloat64(yPosM);
@@ -75,7 +70,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("FolMe.XYPosGet");
         String name = "FolMe.XYPosGet";
-
         out.writeHeader(name, 4);
         out.writeBool(waitNewestData);
         out.flush();
@@ -91,7 +85,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("FolMe.SpeedSet");
         String name = "FolMe.SpeedSet";
-
         out.writeHeader(name, 8);
         out.writeFloat32(speedMps);
         out.writeBool(useCustomSpeed);
@@ -105,7 +98,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("FolMe.SpeedGet");
         String name = "FolMe.SpeedGet";
-
         out.writeHeader(name, 0);
         out.flush();
         ResponseException.checkHeader(name, in.readHeader());
@@ -121,7 +113,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("Scan.XYPosGet");
         String name = "Scan.XYPosGet";
-
         out.writeHeader(name, 4);
         out.writeBool(waitNewestData);
         out.flush();
@@ -137,7 +128,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException, UnsignedException {
         log("Scan.FrameDataGrab");
         String name = "Scan.FrameDataGrab";
-
         out.writeHeader(name, 8);
         out.writeUInt32(channelIndex);
         out.writeBool(scanDirectionForward);
@@ -156,7 +146,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("ZCtrl.ZPosSet");
         String name = "ZCtrl.ZPosSet";
-
         out.writeHeader(name, 4);
         out.writeFloat32(zPosM);
         out.flush();
@@ -169,7 +158,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("Bias.Set");
         String name = "Bias.Set";
-
         out.writeHeader(name, 4);
         out.writeFloat32(voltage);
         out.flush();
@@ -181,7 +169,6 @@ public class NanonisClient {
     synchronized public float BiasGet()
             throws IOException, NanonisException, ResponseException {
         String name = "Bias.Get";
-
         out.writeHeader(name, 0);
         out.flush();
         ResponseException.checkHeader(name, in.readHeader());
@@ -195,7 +182,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("ZCtrl.SetpntSet");
         String name = "ZCtrl.SetpntSet";
-
         out.writeHeader(name, 4);
         out.writeFloat32(setpoint);
         out.flush();
@@ -208,7 +194,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("ZCtrl.SetpntGet");
         String name = "ZCtrl.SetpntGet";
-
         out.writeHeader(name, 0);
         out.flush();
         ResponseException.checkHeader(name, in.readHeader());
@@ -222,7 +207,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("Current.Get");
         String name = "Current.Get";
-
         out.writeHeader(name, 0);
         out.flush();
         ResponseException.checkHeader(name, in.readHeader());
@@ -236,7 +220,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("ZCtrl.OnOffSet");
         String name = "ZCtrl.OnOffSet";
-
         out.writeHeader(name, 4);
         out.writeBool(state);
         out.flush();
@@ -249,7 +232,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("Scan.FrameGet");
         String name = "Scan.FrameGet";
-
         out.writeHeader(name, 0);
         out.flush();
         ResponseException.checkHeader(name, in.readHeader());
@@ -268,7 +250,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("Scan.FrameSet");
         String name = "Scan.FrameSet";
-
         out.writeHeader(name, 20);
         out.writeFloat32(centerXM);
         out.writeFloat32(centerYM);
@@ -285,7 +266,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("Scan.BufferGet");
         String name = "Scan.BufferGet";
-
         out.writeHeader(name, 0);
         out.flush();
         ResponseException.checkHeader(name, in.readHeader());
@@ -302,7 +282,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("Scan.BufferSet");
         String name = "Scan.BufferSet";
-
         out.writeHeader(name, 12 + channelIndexes.length * 4);
         out.writeArrayInt1D(channelIndexes);
         out.writeInt(pixelsPerLine);
@@ -317,7 +296,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("Scan.Action");
         String name = "Scan.Action";
-
         out.writeHeader(name, 6);
         try {
             out.writeUInt16(action.toInt());
@@ -335,7 +313,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("Scan.StatusGet");
         String name = "Scan.StatusGet";
-
         out.writeHeader(name, 0);
         out.flush();
         ResponseException.checkHeader(name, in.readHeader());
@@ -349,7 +326,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("ZCtrl.Withdraw");
         String name = "ZCtrl.Withdraw";
-
         out.writeHeader(name, 8);
         out.writeBool(waitUntilFinished);
         out.writeInt(timeoutMS);
@@ -363,7 +339,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("AutoApproach.Open");
         String name = "AutoApproach.Open";
-
         out.writeHeader(name, 0);
         out.flush();
         ResponseException.checkHeader(name, in.readHeader());
@@ -375,7 +350,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("AutoApproach.OnOffSet");
         String name = "AutoApproach.OnOffSet";
-
         out.writeHeader(name, 2);
         try {
             out.writeUInt16(state ? 1 : 0);
@@ -392,7 +366,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException, UnsignedException {
         log("Motor.FreqAmpSet");
         String name = "Motor.FreqAmpSet";
-
         out.writeHeader(name, 10);
         out.writeFloat32(freqHz);
         out.writeFloat32(ampV);
@@ -411,7 +384,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException, UnsignedException {
         log("Motor.StartMove");
         String name = "Motor.StartMove";
-
         out.writeHeader(name, 14);
         out.writeUInt32(direction.toInt());
         out.writeUInt16(numSteps);
@@ -440,7 +412,6 @@ public class NanonisClient {
         for (String mn : modulesNames) {
             len += mn.getBytes().length + 4;
         }
-
         out.writeHeader(name, len);
         try {
             out.writeUInt32(continuousScan ? 1 : 2);
@@ -462,7 +433,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("Piezo.RangeGet");
         String name = "Piezo.RangeGet";
-
         out.writeHeader(name, 0);
         out.flush();
         ResponseException.checkHeader(name, in.readHeader());
@@ -485,7 +455,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException, UnsignedException {
         log("Scan.SpeedSet");
         String name = "Scan.SpeedSet";
-
         out.writeHeader(name, 22);
         out.writeFloat32(fSpeedMps);
         out.writeFloat32(bSpeedMps);
@@ -504,7 +473,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException {
         log("Scan.SpeedGet");
         String name = "Scan.SpeedGet";
-
         out.writeHeader(name, 0);
         out.flush();
         ResponseException.checkHeader(name, in.readHeader());
@@ -524,7 +492,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException, UnsignedException {
         log("Motor.FreqAmpGet");
         String name = "Motor.FreqAmpGet";
-
         out.writeHeader(name, 2);
         out.writeUInt16(axisSelector);
         out.flush();
@@ -542,7 +509,6 @@ public class NanonisClient {
             throws IOException, NanonisException, ResponseException, UnsignedException {
         log("Scan.PropsGet");
         String name = "Scan.PropsGet";
-
         out.writeHeader(name, 0);
         out.flush();
         ResponseException.checkHeader(name, in.readHeader());

@@ -14,19 +14,25 @@ public class ScanFrameTTL {
     public float heightM;
     public float angleDeg;
 
-    private NanonisClient client;
+    private NanonisClientPool clients;
 
-    public ScanFrameTTL(NanonisClient client) {
+    public ScanFrameTTL(NanonisClientPool clients) {
         super();
 
-        this.client = client;
+        this.clients = clients;
     }
 
     public void maybeLoad() throws IOException, NanonisException, ResponseException {
         if (System.currentTimeMillis() < lastLoad + ttlMillis) {
             return;
         }
-        ScanFrame scanFrame = client.ScanFrameGet();
+        NanonisClient client = clients.getClient();
+        ScanFrame scanFrame;
+        try {
+            scanFrame = client.ScanFrameGet();
+        } finally {
+            clients.returnClient(client);
+        }
         centerXM = scanFrame.centerXM();
         centerYM = scanFrame.centerYM();
         widthM = scanFrame.widthM();
@@ -36,6 +42,11 @@ public class ScanFrameTTL {
     }
 
     public void maybeStore() throws IOException, NanonisException, ResponseException {
-        client.ScanFrameSet(centerXM, centerYM, widthM, heightM, angleDeg);
+        NanonisClient client = clients.getClient();
+        try {
+            client.ScanFrameSet(centerXM, centerYM, widthM, heightM, angleDeg);
+        } finally {
+            clients.returnClient(client);
+        }
     }
 }
