@@ -321,46 +321,45 @@ public class BufferedSTMImage extends BufferedImage
 		process(fData);
 		
 		
-		Graphics2D g = createGraphics();
-		if (maxZFraction <= minZFraction)
-			maxZFraction = minZFraction + .1f;
-		
+		float[] imgData = new float[data.length * data[0].length * 4];
 		for (int y = 0; y < data[0].length; y ++)
 		{
 			for (int x = 0; x < data.length; x ++)
 			{
 				float val = fData[x][y];
-				
-				
+
+
 				val = (val-minZFraction)/(maxZFraction-minZFraction);
-				
+
 				if (val > 1)
 					val = 1;
 				if (val < 0)
 					val = 0;
-				
-				Color c; 
+
+				Color c;
 				if (y > cropYEnd)
 					c = new Color(val,val,val,0);
 				else if (y < cropYStart)
 					c = new Color(val,val,val,0);
 				else
 					c = getColor(val);
-				g.setColor( c );
-				
-								
+
+
 				int yVal = y;
-				
+
 				yVal = data[0].length - y - 1;
-				
+
 				int xVal = x;
-								
-				g.fillRect(xVal, yVal, 1, 1); 
+
+				int rows = data.length;
+				int pixelIndex = (xVal + yVal * rows) * 4;
+				imgData[pixelIndex + 0] = c.getRed();
+				imgData[pixelIndex + 1] = c.getGreen();
+				imgData[pixelIndex + 2] = c.getBlue();
+				imgData[pixelIndex + 3] = 255;
 			}
 		}
-		
-		g.dispose();
-		g = null;
+		getRaster().setPixels(0, 0, data.length, data[0].length, imgData);
 	}
 	
 	public int colorSchemeIdx = 0;
